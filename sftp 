@@ -1,0 +1,32 @@
+setting sftp on centos6
+
+1.yum install -y openssh-server openssh-clients ssh
+
+2.servie sshd start
+
+3.chkconfig sshd on 35
+
+4.vim /etc/ssh/sshd_config
+
+----------------->
+Subsystem       sftp    internal-sftp
+Match group sftp
+ChrootDirectory /home/%u
+ForceCommand internal-sftp
+X11Forwarding no
+AllowTcpForwarding no
+
+------------------->
+
+5.service sshd start
+
+6.chown root:root /home/sftpuser
+
+7.chmod 755 /home/sftpuser
+
+8.try uploading files with filezilla
+
+              or
+  ftp username@ipaddress
+
+

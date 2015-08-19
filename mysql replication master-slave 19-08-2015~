@@ -1,0 +1,209 @@
+
+how to perform master and slave replication on centos 6?
+
+requirements:
+
+1.virtual box
+2.operating system base os
+3.internet or mysql-server and mysql package 
+
+procedure:
+
+1.create 2 virtual machines (one for master db and slave db)
+2.install both vms with centos
+3.configure networking
+
+>>>>>>>change hostnames in /etc/sysconfig/network
+>>>>>>>both vms should have different ips bridged or natted.
+
+Working Linux OS like CentOS 6.3, RedHat 6.3 or Fedora 17
+Master and Slave are CentOS 6.3 Linux Servers.
+Master IP Address is: 192.168.56.116
+Slave IP Address is: 192.168.56.115
+Master and Slave are on the same LAN network.
+Master and Slave has MySQL version installed.
+Master allow remote MySQL connections on port 3306
+
+We have two servers, one is Master with IP (192.168.56.116) and other is Slave as (192.168.56.115). 
+
+Let’s start the replication setup process
+
+
+Configure Master Server (192.168.56.116) for replication:
+
+1.yum install mysql-server mysql
+2.vi /etc/my.cnf
+>>>>>>>>>>>>>>>>>>>Add the following entries under [mysqld] section and don’t forget to replace tecmint with database name that you would like to replicate on Slave.
+
+server-id = 1
+binlog-do-db=tecmint     --------------------------------->(combined database name)
+relay-log = /var/lib/mysql/mysql-relay-bin
+relay-log-index = /var/lib/mysql/mysql-relay-bin.index
+log-error = /var/lib/mysql/mysql.err
+master-info-file = /var/lib/mysql/mysql-master.info
+relay-log-info-file = /var/lib/mysql/mysql-relay-log.info
+log-bin = /var/lib/mysql/mysql-bin
+
+
+3./etc/init.d/mysqld restart
+
+4.mysql -u root -p
+
+5.mysql> GRANT REPLICATION SLAVE ON *.* TO 'slave_user'@'%' IDENTIFIED BY 'your_password';
+
+6.mysql> FLUSH PRIVILEGES;
+
+7.mysql> FLUSH TABLES WITH READ LOCK;
+
+8.mysql> SHOW MASTER STATUS;
+
+9.quit;
+
+10.mysqldump -u root -p --all-databases --master-data > /root/dbdump.db
+
+--------------> taking dump of database to /root note down (mysql-bin.000003) and Position (11128001) numbers.
+
+11.mysql -u root -p
+
+12.mysql> UNLOCK TABLES;
+
+13.mysql> quit;
+
+14.scp /root/dbdump.db root@192.168.1.2:/root/   -----------> Upload the database dump file on Slave Server (192.168.56.115) using SCP command.
+
+
+
+
+
+Configure Slave Server (192.168.56.115) for replication:
+
+1.yum install mysql-server mysql
+
+2.vi /etc/my.cnf
+
+------------------->Add the following entries under [mysqld] section and don’t forget to replace IP address of Master server, tecmint with database name etc, that you would like to replicate with Master.
+
+server-id = 2
+master-host=192.168.1.1
+master-connect-retry=60
+master-user=slave_user
+master-password=lsnworks -------------> your password
+replicate-do-db=tecmint
+relay-log = /var/lib/mysql/mysql-relay-bin
+relay-log-index = /var/lib/mysql/mysql-relay-bin.index
+log-error = /var/lib/mysql/mysql.err
+master-info-file = /var/lib/mysql/mysql-master.info
+relay-log-info-file = /var/lib/mysql/mysql-relay-log.info
+log-bin = /var/lib/mysql/mysql-bin
+
+
+3. mysql -u root -p < /root/dbdump.db
+
+4. /etc/init.d/mysqld restart
+
+5.mysql -u root -p
+
+6.mysql> slave stop;
+
+7.mysql> CHANGE MASTER TO MASTER_HOST='192.168.1.1', MASTER_USER='slave_user', MASTER_PASSWORD='yourpassword', MASTER_LOG_FILE='mysql-bin.000003', MASTER_LOG_POS=11128001;
+
+----------------> enter master mysql-bin.000003 and master position.
+
+8.mysql> slave start;
+
+9.mysql> show slave status\G;
+
+
+
+sample output
+
+
+*************************** 1. row ***************************
+               Slave_IO_State: Waiting for master to send event
+                  Master_Host: 192.168.1.1
+                  Master_User: slave_user
+                  Master_Port: 3306
+                Connect_Retry: 60
+              Master_Log_File: mysql-bin.000003
+          Read_Master_Log_Pos: 12345100
+               Relay_Log_File: mysql-relay-bin.000002
+                Relay_Log_Pos: 11381900
+        Relay_Master_Log_File: mysql-bin.000003
+             Slave_IO_Running: Yes
+            Slave_SQL_Running: Yes
+              Replicate_Do_DB: tecmint
+          Replicate_Ignore_DB:
+           Replicate_Do_Table:
+       Replicate_Ignore_Table:
+      Replicate_Wild_Do_Table:
+  Replicate_Wild_Ignore_Table:
+                   Last_Errno: 0
+                   Last_Error:
+                 Skip_Counter: 0
+          Exec_Master_Log_Pos: 12345100
+              Relay_Log_Space: 11382055
+              Until_Condition: None
+               Until_Log_File:
+                Until_Log_Pos: 0
+           Master_SSL_Allowed: No
+           Master_SSL_CA_File:
+           Master_SSL_CA_Path:
+              Master_SSL_Cert:
+            Master_SSL_Cipher:
+               Master_SSL_Key:
+        Seconds_Behind_Master: 0
+Master_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error:
+               Last_SQL_Errno: 0
+               Last_SQL_Error:
+1 row in set (0.00 sec)
+
+***********************************************
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
+Verifying MySQL Replication on Master and Slave Server
+
+
+ON MASTER:
+
+mysql> create database tecmint;
+mysql> use tecmint;
+mysql> CREATE TABLE employee (c int);
+mysql> INSERT INTO employee (c) VALUES (1);
+mysql> SELECT * FROM employee;
+
+
+
+sample output:
+
++------+
+|  c  |
++------+
+|  1  |
++------+
+1 row in set (0.00 sec)
+
+
+
+ON SLAVE:
+
+mysql> use tecmint;
+mysql> SELECT * FROM employee;
+
+
+sample output:
+
++------+
+|  c  |
++------+
+|  1  |
++------+
+1 row in set (0.00 sec)
+
+
+
+

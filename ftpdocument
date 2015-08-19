@@ -1,0 +1,205 @@
+how to install ftp on centos 6 :
+
+What is FTP?
+
+FTP is short for File Transfer Protocol that was developed by Abhay Bhushan in 1971. FTP is the easiest way to transfer files between computers via the internet, and utilizes TCP, transmission control protocol, and IP, internet protocol, systems to perform uploading and downloading tasks.
+It is a protocol through which internet users can download/upload files from/to their computers to a website or to their PCs. You can use FTP to exchange files between computer accounts, transfer files between an account and a desktop computer, or access online software archives.
+
+Concept/Term related to FTP
+Working of FTP?
+FTP by default uses two port 20 and 21 to communicate. First, you as client make a TCP control connection to the FTP server’s port 21 which will remain open during the transfer process. In response, the FTP server opens a second connection that is the data connection from the server’s port 20 to your computer.
+
+Active mode FTP
+Among the two modes, Active mode is the older one. It was the mode introduced in the early days of computing when mainframes were more common and attacks to information security were not as prevalent.
+A user connects from a random port on a file transfer client to port 21 on the server. It sends the PORT command, specifying what client-side port the server should connect to. This port will be used later on for the data channel and is different from the port used in this step for the command channel.
+The server connects from port 20 to the client port designated for the data channel. Once connection is established, file transfers are then made through these client and server ports.
+
+Passive mode FTP
+Passive mode is generally used in situations where the FTP server is not able to establish the data channel. One of the major reasons for this is network firewalls. In passive mode, the client establishes both channels. In that case, the server tells the client which port should be used for the data channel.
+The client connects from a random port to port 21 on the server and issues the PASV command. The server replies, indicating which (random) port it has opened for data transfer.
+The client connects from another random port to the random port specified in the server’s response. Once connection is established, data transfers are made through these client and server ports.
+
+Anonymous FTP
+
+Many public servers on the Internet allow users to log in and download files via FTP by connecting anonymously. This is a very common practice in the world of open-source and freely distributed software. If you are using a private FTP server, however, you must sign in with a user name and password to initiate the exchange of data.
+
+ASCII versus Binary
+
+File transfers over FTP take two different forms, ASCII and binary. Any file that is made up of text or text-based components, such as an HTML file, text file, or PostScript file, is an ASCII file. Binary files, on the other hand, are structured differently, and therefore require a different style of transfer. Images, applications, and algorithmically generated packages such as .zip and .tar files are all binary file types.
+
+Most clients run in binary transfer mode by default, only using ASCII mode when it’s absolutely needed. This is because both ASCII and binary files can be sent in binary mode with no problems, but sending a binary file in ASCII mode will corrupt the binary file’s structure. ASCII mode makes for faster transfers, but if you accidentally upload a Microsoft Word file or JPG image in ASCII mode, your file will hit the server dead on arrival. If there’s any question, transfer in binary mode.
+
+Vsftpd (Very Secure FTP Daemon) is an FTP server for UNIX-like systems, including CentOS / RHEL / Fedora / Amazon Linux and other Linux distributions. It supports IPv6, SSL, locking users to their home directories and many other advanced features.
+
+
+-------------------------------------------------------------------------------------------------------
+
+
+installing ftp
+
+1. yum install vsftpd -y
+
+2.vim /etc/vsftpd/vsftpd.conf
+
+a.common options:
+
+------------------------------------->
+# Turn off standard ftpd xferlog log format, by use the following option:
+xferlog_std_format=NO
+
+# Turn on verbose vsftpd log format, by use the following option:
+log_ftp_protocol=YES
+
+# To display a welcome banner to every user that connects to FTP Server
+banner_file=/etc/vsftpd/welcome.banner
+
+# Following parameter allows you to quickly set a single line welcome string for when new users connect.
+ftpd_banner=Welcome to FTPd Server
+
+# The default account for anonymous access, if another system account is needed it can be specified here.
+nopriv_user=ftp
+
+# This is the 'root' directory where your FTP files should be located. It should be an empty directory, and not writeable by "ftp" user (unless you are configuring anonymous upload).
+anon_root=/var/ftp
+
+# The umask parameters define the "chmod" value (permissions) of the files when they are uploaded to the FTPs filesystem. To calculate the permission value, start at 777, then substract the umask value. So if a anon_umask value is set at 077, then the file will have the permissions of 700 on the file system (this may prevent the file from later being downloaded depending on filesystem permissions).
+
+anon_umask=077
+local_umask=022
+-------------------------------------->
+
+b.for limiting connections:
+
+--------------------------------------->
+
+# Maximum data transfer rate in bytes per second
+local_max_rate=1000000
+
+# Maximum number of clients that may be connected
+max_clients=50
+
+# Maximum connections per IP      
+max_per_ip=2
+----------------------------------------->
+
+c.Anonymous User Access Only:
+
+----------------------------------------->
+
+# Allow anonymous, unidentified users to download files via FTP:
+anonymous_enable=YES
+
+# No password is required for an anonymous login          
+no_anon_password=YES
+
+# Maximum transfer rate for an anonymous client in Bytes/second          
+anon_max_rate=30000 
+
+# Directory to be used for an anonymous login           
+anon_root=/example/directory/
+
+# Disabling local user access, by use the following option:
+local_enable=NO
+
+
+----------------------------------------->
+
+d.Enabling Local User Access and Disabling Anonymous access.
+
+------------------------------------------>
+
+# Disallow anonymous, by use the following option:
+anonymous_enable=NO
+
+# Allow local uses to login by, by use the following option:
+local_enable=YES
+
+# If you want local user to be able to write to a directory, by use the following option:
+write_enable=YES
+
+# To prevent users from logging into the FTP server, by use the following option:
+userlist_enable=YES
+
+# This file specifies the file which lists users that are not able to login:
+userlist_file=/etc/vsftpd/vsftpd.user_list
+
+------------------------------------------>
+
+e.chroot jail
+
+------------------------------------------>
+
+# Local users will be denied access to any other part of the server, by use the following option:
+chroot_local_user=YES
+
+chroot_list_enable=YES
+# The chroot_list_file variable specifies the file which contains users that are jailed.
+chroot_list_file=/etc/vsftpd.chroot_list
+
+------------------------------------------>
+
+3. service vsftpd restart
+
+4.chkconfig --level 35 vsftpd on 
+
+--------------------------------------->
+
+Check the vsftpd process is running using the process status “ps“command:
+
+
+5.ps -ef | grep -v grep | grep -i vsftpd
+
+----------------------..----------------->
+
+Check for port used by vsftpd process using the “netstat” or “lsof” command:
+
+6.netstat -planet | grep -i ':21'
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+Allowing FTP Access to Files Outside the Home Directory Chroot:
+
+
+1.if we configure the chroot restriction for the ftp users we will notice that as expected they will be locked in the chrooted folder (let’s say their home directory).
+
+2. If we try to create a symlink to the other folder they need access, this will just not allow them to change into that folder (break out the chroot) and this is very normal.
+
+3. To exemplify this let’s consider that I am using vsftpd and one user ftp_user. Chroot restriction is enabled on ftp accounts and his home is in /home/ftp_user. But I need to provide him access for another folder /var/www/dev/. Even though I am using here vsftpd the same concept applies to any other ftp server software.
+
+
+procedure:
+
+1.vim /etc/vsftpd/vsftpd.conf
+
+--------------->
+chroot_local_user=YES
+
+mkdir /home/ftp_user/www_dev
+
+mount --bind /var/www/dev/ /home/ftp_user/www_dev
+
+---------------->
+
+2.vim /etc/fstab
+
+/var/www/dev  /home/ftp_user/www_dev    none    bind    0       0
+
+
+check config file options :
+
+
+/etc/vsftpd.conf
+listen=YES
+anonymous_enable=NO
+local_enable=YES
+write_enable=YES
+dirmessage_enable=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+chroot_local_user=YES
+secure_chroot_dir=/var/run/vsftpd
+pam_service_name=vsftpd
+rsa_cert_file=/etc/ssl/certs/vsftpd.pem
+
